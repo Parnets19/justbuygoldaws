@@ -12,23 +12,14 @@ app.use(cors());
 app.use(morgan("dev"));
 
 // Enhanced request logging middleware
-app.use((req, res, next) => {
-  console.log("🌐 INCOMING REQUEST:");
-  console.log("📡 Method:", req.method);
-  console.log("🔗 URL:", req.url);
-  console.log("🌍 IP:", req.ip || req.connection.remoteAddress);
-  console.log("📋 Headers:", req.headers);
-  console.log("📦 Body:", req.body);
-  console.log("⏰ Timestamp:", new Date().toISOString());
-  console.log("─────────────────────────────────────────────");
-  next();
-});
+
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static("Public"));
+app.use('/Banners', express.static(path.join(__dirname, 'Public/Banners')));
 
-// Router++++++++++++++++++++++++++++++++++++++++
+
 
 const UserRouter = require("./Route/Auth");
 const GoldeRateRouter = require("./Route/Admin/GoldRate");
@@ -42,6 +33,7 @@ const Referralprice = require("./Route/Admin/RefferalPrice");
 const walletHistoryRoutes = require("./Route/Admin/WalletHistory"); 
 const fcmRoutes = require("./Route/FcmRoutes");
 const bulkNotificationRoutes = require("./Route/BulkNotificationRoutes");
+const bannerRoutes = require("./Route/BannerRoutes");
 
 app.use("/api/v1/user/auth", UserRouter);
 app.use("/api/v1/rate", GoldeRateRouter);
@@ -55,6 +47,7 @@ app.use("/api/v1", Referralprice);
 app.use("/api/v1", walletHistoryRoutes); 
 app.use("/api/user", fcmRoutes);
 app.use("/api/admin/notifications", bulkNotificationRoutes);
+app.use("/api/banners", bannerRoutes);
 
 
 
@@ -104,5 +97,7 @@ app.listen(PORT, () => {
   console.log("   📢 Bulk Notifications: /api/admin/notifications/send-notification");
   console.log("   📋 Notification Logs: /api/admin/notifications/logs");
   console.log("   📊 Notification Stats: /api/admin/notifications/stats");
+  console.log("   🖼️ Active Banners: /api/banners/active");
+  console.log("   🔧 Banner Management: /api/banners");
   console.log("🔧 Server ready to handle requests");
 });
