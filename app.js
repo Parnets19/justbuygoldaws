@@ -7,7 +7,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 const path = require("path");
 
-//middleware+++++++++++++++++++++++++++++++++++++++++++++++++++
+
 app.use(cors());
 app.use(morgan("dev"));
 
