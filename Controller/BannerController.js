@@ -20,9 +20,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  },
   fileFilter: function (req, file, cb) {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -44,7 +41,7 @@ const getBanners = async (req, res) => {
     // Convert to full URLs for mobile app
     const bannersWithUrls = banners.map(banner => ({
       _id: banner._id,
-      imageUrl: `http://192.168.1.49:3034/Banners/${path.basename(banner.imagePath)}`,
+      imageUrl: `https://justbuygold.online/Banners/${path.basename(banner.imagePath)}`,
       createdAt: banner.createdAt
     }));
 
@@ -76,7 +73,7 @@ const getAllBanners = async (req, res) => {
     // Convert to full URLs for admin panel
     const bannersWithUrls = banners.map(banner => ({
       _id: banner._id,
-      imageUrl: `http://192.168.1.49:3034/Banners/${path.basename(banner.imagePath)}`,
+      imageUrl: `https://justbuygold.online/Banners/${path.basename(banner.imagePath)}`,
       createdAt: banner.createdAt
     }));
 
@@ -132,7 +129,7 @@ const uploadBanner = async (req, res) => {
       message: "Banner uploaded successfully",
       data: {
         _id: banner._id,
-        imageUrl: `http://192.168.1.49:3034/Banners/${path.basename(banner.imagePath)}`,
+        imageUrl: `https://justbuygold.online/Banners/${path.basename(banner.imagePath)}`,
         createdAt: banner.createdAt
       }
     });

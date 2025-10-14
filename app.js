@@ -14,8 +14,8 @@ app.use(morgan("dev"));
 // Enhanced request logging middleware
 
 
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static("Public"));
 app.use('/Banners', express.static(path.join(__dirname, 'Public/Banners')));
 

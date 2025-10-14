@@ -39,7 +39,7 @@ class Auth {
         console.log("❌ EMAIL EXISTS: Email is already registered");
         return res.status(403).json({ msg: "Email is already Registered" });
       }
-      
+  
       console.log("✅ Email is available");
       console.log("🔍 Checking if phone already exists:", phoneno);
       
@@ -130,7 +130,7 @@ class Auth {
       // Find user by email
       const isUserPresent = await Authmodel.findOne({ email: email });
       console.log("👤 User found:", !!isUserPresent);
-      
+
       if (!isUserPresent) {
         console.log("❌ USER NOT FOUND: Email does not exist in database");
         return res.status(400).json({ error: "Email is wrong" });
@@ -184,117 +184,6 @@ class Auth {
     }
   }
 
-  //   Login with otp==========================
-//   async loginWithOtp(req, res) {
-//     const { phoneno } = req.body;
-//     console.log(phoneno,"phonenumber>>>>>")
-//     try {
-//       const isPhonePresent = await Authmodel.findOne({ phoneno: phoneno });
-//       if (!isPhonePresent) {
-//         return res.status(400).json({ error: "Phone no is not registered..." });
-//       }
-//      const persentBlock = await Authmodel.findOne({ isBlock: true });
-//       if (persentBlock) {
-//         return res.status(403).json({ error: "Block by Admin !!!" });
-//       }
-
-//       let otp = (Math.floor(Math.random() * 1000000) + 1000000)
-//         .toString()
-//         .substring(1);
-        
-//         console.log("otp..............",otp)
-
-//       // Checking that the phone is already present in the DB or not.
-
-//     //   const phoneNoPresent = await otpModel.findOne({ phoneno: phoneno });
-
-//     //   const key = "Ae97f7ad9d6c2647071d78b6e94a3c87e";
-//     //   const sid = "RDABST";
-//     //   const to = phoneno;
-//     //   const body = `Hi, Your OTP for mobile verification is ${otp} Regards, Team ReadAbstract`;
-//     //   axios
-//     //     .get(
-//     //       "https://api-alerts.kaleyra.com/v4/?api_key=" +
-//     //         key +
-//     //         "&method=sms&message=" +
-//     //         body +
-//     //         "&to=" +
-//     //         to +
-//     //         "&sender=RDABST"
-//     //     )
-//     //     .then(async (data) => {
-//     //       console.log(`statusCode: ${data.status}`);
-//     //       console.log(data);
-//     //       if (!phoneNoPresent) {
-//     //         let newotp = new otpModel({
-//     //           phoneno,
-//     //           otp,
-//     //         });
-//     //         newotp
-//     //           .save()
-//     //           .then((data) => {
-//     //             return res.status(200).json({
-//     //               success: `OTP sent: ${data.otp}`,
-//     //               details: isPhonePresent,
-//     //               dummy_otp:otp
-//     //             });
-//     //           })
-//     //           .catch((error) => {
-//     //             return res.status(400).json({ error: error });
-//     //           });
-//     //       } else {
-//     //         await otpModel.findOneAndUpdate(
-//     //           { phoneno: phoneno },
-//     //           { $set: { otp: otp } },
-//     //           { new: true }
-//     //         );
-//     //         return res.status(200).json({
-//     //           success: "OTP sent successfully",
-//     //           details: isPhonePresent,
-//     //           dummy_otp:otp
-//     //         });
-//     //       }
-//     //     })
-//     //     .catch((error) => {
-//     //       console.error(error);
-//     //       return res.status(500).json({ error: error });
-//     //     });
-    
-//     // if (!phoneNoPresent) {
-//     //         let newotp = new otpModel({
-//     //           phoneno,
-//     //           otp,
-//     //         });
-//     //         newotp
-//     //           .save()
-//     //           .then((data) => {
-//     //             return res.status(200).json({
-//     //               success: `OTP sent: ${data.otp}`,
-//     //               details: isPhonePresent,
-//     //               dummy_otp:otp
-//     //             });
-//     //           })
-//     //           .catch((error) => {
-//     //             return res.status(400).json({ error: error });
-//     //           });
-//     //       } else {
-//     //         await otpModel.findOneAndUpdate(
-//     //           { phoneno: phoneno },
-//     //           { $set: { otp: otp } },
-//     //           { new: true }
-//     //         );
-//     //         return res.status(200).json({
-//     //           success: "OTP sent successfully",
-//     //           details: isPhonePresent,
-//     //           dummy_otp:otp
-//     //         });
-//     //       }
-//     } catch (error) {
-//       console.log(error);
-//     }
-//   }
-
-
 async loginWithOtp(req, res) {
   console.log("📱 OTP LOGIN ATTEMPT STARTED");
   console.log("📱 Request Body:", { phoneno: req.body.phoneno });
@@ -318,7 +207,7 @@ async loginWithOtp(req, res) {
       console.log("❌ USER NOT FOUND: Phone number not registered");
       return res.status(400).json({ error: "Phone no is not registered..." });
     }
-    
+
     console.log("✅ User found in database");
     console.log("👤 User ID:", isPhonePresent.userId);
     console.log("👤 User Name:", isPhonePresent.name);
@@ -369,9 +258,6 @@ async loginWithOtp(req, res) {
   }
 }
 
-
-
-
   // OTP Varification==========================
 
   async otpVarification(req, res) {
@@ -392,7 +278,7 @@ async loginWithOtp(req, res) {
       
       const varify = await otpModel.findOne({ phoneno: phoneno });
       console.log("📱 OTP record found:", !!varify);
-      
+
       if (!varify) {
         console.log("❌ OTP NOT FOUND: No OTP record found for this phone number");
         return res.status(400).json({ error: "OTP is wrong" });
@@ -627,7 +513,6 @@ async getUserById(req, res) {
     return res.status(500).json({ success: "false", msg: "Something went wrong" });
   }
 }
-
 }
 
 const Authcontroller = new Auth();

@@ -76,3 +76,12 @@ notificationLogSchema.index({ status: 1 });
 notificationLogSchema.index({ target: 1 });
 
 module.exports = mongoose.model('NotificationLog', notificationLogSchema);
+
+
+
+
+
+
+
+
+
