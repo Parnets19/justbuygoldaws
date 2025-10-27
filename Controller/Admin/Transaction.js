@@ -6,24 +6,59 @@ const axios = require("axios");
 class transaction {
   async transactions(req, res) {
     try {
-      let { UserId, amount, gold, PaymentId, status,totalCoin , goldRate , gst , goldValue } = req.body;
-      console.log("data", UserId, amount, gold, PaymentId, status);
+      let { UserId, amount, gold, PaymentId, status, totalCoin, goldRate, gst, goldValue } = req.body;
+      
+      console.log("🔄 TRANSACTION: Creating new transaction");
+      console.log("📦 TRANSACTION: Request body:", req.body);
+      console.log("👤 TRANSACTION: UserId:", UserId);
+      console.log("💰 TRANSACTION: Amount:", amount);
+      console.log("🥇 TRANSACTION: Gold:", gold);
+      console.log("💳 TRANSACTION: PaymentId:", PaymentId);
+      
+      // Validate required fields
+      if (!UserId) {
+        console.log("❌ TRANSACTION: UserId is missing");
+        return res.status(400).json({ error: "UserId is required" });
+      }
+      
+      if (!amount || !gold) {
+        console.log("❌ TRANSACTION: Amount or gold is missing");
+        return res.status(400).json({ error: "Amount and gold are required" });
+      }
+      
       const newPayment = new transactionModel({
         UserId,
         amount,
         gold,
         PaymentId,
         totalCoin,
-        status,
-        goldRate , gst , goldValue
+        status: status || "Paid", // Default status
+        goldRate,
+        gst,
+        goldValue
       });
-      newPayment.save().then((data) => {
-        return res
-          .status(200)
-          .json({ success: newPayment, msg: "Payment Successfully" });
+      
+      console.log("💾 TRANSACTION: Saving transaction to database...");
+      
+      const savedTransaction = await newPayment.save();
+      
+      console.log("✅ TRANSACTION: Transaction saved successfully");
+      console.log("🆔 TRANSACTION: Saved transaction ID:", savedTransaction._id);
+      console.log("👤 TRANSACTION: Saved UserId:", savedTransaction.UserId);
+      
+      return res.status(200).json({ 
+        success: savedTransaction, 
+        msg: "Payment Successfully",
+        transactionId: savedTransaction._id
       });
+      
     } catch (error) {
-      return res.status(400).json({ error: error });
+      console.log("❌ TRANSACTION: Error creating transaction:", error);
+      console.log("❌ TRANSACTION: Error details:", error.message);
+      return res.status(400).json({ 
+        error: error.message,
+        details: "Failed to create transaction"
+      });
     }
   }
 
@@ -129,18 +164,45 @@ class transaction {
   async byIdTransaction(req, res) {
     try {
       let id = req.params.id;
+      
+      console.log("🔍 TRANSACTION HISTORY: Fetching transactions for user:", id);
+      
+      if (!id) {
+        console.log("❌ TRANSACTION HISTORY: User ID is missing");
+        return res.status(400).json({ success: false, error: "User ID is required" });
+      }
 
       const gettransaction = await transactionModel
         .find({
           UserId: id,
         })
-        .populate("UserId");
-      // console.log("all details", gettransaction);
-      // console.log("user", gettransaction);
-      res.status(200).json({ success: gettransaction });
+        .populate("UserId")
+        .sort({ createdAt: -1 }); // Sort by newest first
+      
+      console.log("📊 TRANSACTION HISTORY: Found", gettransaction.length, "transactions for user:", id);
+      
+      if (gettransaction.length > 0) {
+        console.log("✅ TRANSACTION HISTORY: First transaction ID:", gettransaction[0]._id);
+        console.log("✅ TRANSACTION HISTORY: First transaction UserId:", gettransaction[0].UserId);
+        console.log("✅ TRANSACTION HISTORY: First transaction amount:", gettransaction[0].amount);
+      } else {
+        console.log("⚠️ TRANSACTION HISTORY: No transactions found for user:", id);
+      }
+      
+      res.status(200).json({ 
+        success: gettransaction,
+        count: gettransaction.length,
+        userId: id
+      });
+      
     } catch (error) {
-      res.status(400).json({ success: false });
-      console.log(error);
+      console.log("❌ TRANSACTION HISTORY: Error fetching transactions:", error);
+      console.log("❌ TRANSACTION HISTORY: Error details:", error.message);
+      res.status(400).json({ 
+        success: false, 
+        error: error.message,
+        details: "Failed to fetch transaction history"
+      });
     }
   }
 }

@@ -148,8 +148,18 @@ const deleteBanner = async (req, res) => {
   try {
     console.log("🔧 ADMIN: Deleting banner");
     console.log("📦 ADMIN: Banner ID:", req.params.id);
+    console.log("📦 ADMIN: Request params:", req.params);
     
     const { id } = req.params;
+
+    // Validate ID
+    if (!id || id === 'undefined' || id === 'null') {
+      console.log("❌ ADMIN: Invalid banner ID provided");
+      return res.status(400).json({
+        success: false,
+        message: "Invalid banner ID"
+      });
+    }
 
     const banner = await Banner.findById(id);
     if (!banner) {

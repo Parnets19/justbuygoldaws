@@ -185,58 +185,36 @@ class Auth {
   }
 
 async loginWithOtp(req, res) {
-  console.log("📱 OTP LOGIN ATTEMPT STARTED");
-  console.log("📱 Request Body:", { phoneno: req.body.phoneno });
-  
   const { phoneno } = req.body;
   
   try {
     // Validate input
     if (!phoneno) {
-      console.log("❌ VALIDATION FAILED: Missing phone number");
       return res.status(400).json({ error: "Please provide phone number" });
     }
     
-    console.log("✅ Input validation passed");
-    console.log("🔍 Searching for user with phone:", phoneno);
+    // Generate OTP immediately (no waiting for DB first)
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    const expirationTime = new Date(Date.now() + 5 * 60 * 1000);
     
-    const isPhonePresent = await Authmodel.findOne({ phoneno });
-    console.log("👤 User found:", !!isPhonePresent);
+    // Check user and check block status in parallel with OTP save
+    const [isPhonePresent] = await Promise.all([
+      Authmodel.findOne({ phoneno }).lean(),
+      otpModel.findOneAndUpdate(
+        { phoneno },
+        { $set: { otp, expire_at: expirationTime } },
+        { upsert: true, new: true }
+      )
+    ]);
     
     if (!isPhonePresent) {
-      console.log("❌ USER NOT FOUND: Phone number not registered");
       return res.status(400).json({ error: "Phone no is not registered..." });
     }
-
-    console.log("✅ User found in database");
-    console.log("👤 User ID:", isPhonePresent.userId);
-    console.log("👤 User Name:", isPhonePresent.name);
-    console.log("📧 User Email:", isPhonePresent.email);
-    console.log("🔒 User Block Status:", isPhonePresent.isBlock);
     
     // Check if user is blocked
     if (isPhonePresent.isBlock === true) {
-      console.log("🚫 USER BLOCKED: Account is blocked by admin");
       return res.status(403).json({ error: "Account is blocked by Admin !!!" });
     }
-    
-    console.log("✅ User account is not blocked");
-    console.log("🔢 Generating OTP...");
-
-    // Generate OTP (Fixed for testing - change this to random for production)
-    const otp = 123456; // Fixed OTP for testing
-    // const otp = Math.floor(100000 + Math.random() * 900000); // Uncomment for random OTP
-    console.log("🔢 Generated OTP:", otp);
-
-    console.log("💾 Saving OTP to database...");
-    await otpModel.findOneAndUpdate(
-      { phoneno },
-      { $set: { otp } },
-      { upsert: true, new: true }
-    );
-    
-    console.log("✅ OTP saved successfully");
-    console.log("🎉 OTP GENERATION SUCCESSFUL");
 
     return res.status(200).json({
       success: "OTP generated successfully",
@@ -246,11 +224,7 @@ async loginWithOtp(req, res) {
     });
     
   } catch (error) {
-    console.log("💥 OTP GENERATION ERROR:");
-    console.log("❌ Error message:", error.message);
-    console.log("❌ Error stack:", error.stack);
-    console.log("❌ Full error object:", error);
-    
+    console.error("OTP Generation Error:", error);
     return res.status(500).json({ 
       error: "Internal Server Error",
       message: "Failed to generate OTP. Please try again."
@@ -281,7 +255,20 @@ async loginWithOtp(req, res) {
 
       if (!varify) {
         console.log("❌ OTP NOT FOUND: No OTP record found for this phone number");
-        return res.status(400).json({ error: "OTP is wrong" });
+        return res.status(400).json({ error: "OTP expired or not found. Please request a new OTP." });
+      }
+      
+      // Check if OTP has expired
+      const now = new Date();
+      const otpExpiry = new Date(varify.expire_at);
+      console.log("🕐 Current time:", now);
+      console.log("🕐 OTP expires at:", otpExpiry);
+      
+      if (now > otpExpiry) {
+        console.log("⏰ OTP EXPIRED: OTP has expired");
+        // Delete expired OTP
+        await otpModel.deleteOne({ phoneno: phoneno });
+        return res.status(400).json({ error: "OTP has expired. Please request a new OTP." });
       }
       
       console.log("✅ OTP record found");
@@ -296,7 +283,7 @@ async loginWithOtp(req, res) {
         console.log("❌ OTP MISMATCH: Provided OTP does not match stored OTP");
         console.log("🔑 Stored OTP (string):", storedOtp);
         console.log("🔑 Provided OTP (string):", providedOtp);
-        return res.status(400).json({ error: "OTP is wrong" });
+        return res.status(400).json({ error: "Invalid OTP. Please check and try again." });
       }
       
       console.log("✅ OTP verification successful");
@@ -307,7 +294,7 @@ async loginWithOtp(req, res) {
       
       if (!isPhonePresent) {
         console.log("❌ USER NOT FOUND: Phone number not registered");
-        return res.status(400).json({ error: "Phone number not registered" });
+        return res.status(400).json({ error: "Phone number not registered. Please sign up first." });
       }
       
       console.log("✅ User found in database");
@@ -344,8 +331,6 @@ async loginWithOtp(req, res) {
     }
   }
 
-  //   Get All User=========================
-
   async getlluser(req, res) {
     try {
       const Alluser = await Authmodel.find({});
@@ -357,51 +342,198 @@ async loginWithOtp(req, res) {
     }
   }
 
-  //   Update User=====================
+
 
   async updateUser(req, res) {
     try {
+      console.log("🔄 UPDATE USER ENDPOINT HIT");
+      console.log("📦 Headers:", req.headers);
+      console.log("📦 Body:", req.body);
+      console.log("📦 Files:", req.files);
+      console.log("📦 Query:", req.query);
+      console.log("📦 Method:", req.method);
+      console.log("📦 URL:", req.url);
+      
+      // Check if request is reaching the server
+      console.log("✅ Request received successfully");
+  
       let { userId, name, email, phoneno, password } = req.body;
-      let Obj = {};
-
-      if (name) {
-        Obj["name"] = name;
+      
+      console.log("👤 User ID from request:", userId);
+      console.log("📝 Name from request:", name);
+      console.log("📧 Email from request:", email);
+      console.log("📱 Phone from request:", phoneno);
+      console.log("🔑 Password provided:", password ? "***" : "NOT PROVIDED");
+  
+      if (!userId) {
+        console.log("❌ Missing userId");
+        return res.status(400).json({ 
+          success: false, 
+          msg: "User ID is required" 
+        });
       }
-      if (email) {
-        Obj["email"] = email;
+  
+      console.log("🔍 Searching for user in database...");
+      
+      // Check if user exists
+      const existingUser = await Authmodel.findById(userId);
+      if (!existingUser) {
+        console.log("❌ User not found with ID:", userId);
+        return res.status(404).json({ 
+          success: false, 
+          msg: "User not found" 
+        });
       }
-      if (phoneno) {
-        Obj["phoneno"] = phoneno;
+  
+      console.log("✅ User found:", existingUser.name);
+      
+      let updateObj = {};
+  
+      // Build update object only for provided fields
+      if (name && name.trim() !== "") {
+        updateObj["name"] = name.trim();
+        console.log("📝 Updating name to:", name.trim());
       }
-      if (password) {
-        Obj["password"] = password;
-      }
-      if (req.files) {
-        let arr = req.files;
-        let i;
-        for (i = 0; i < arr?.length; i++) {
-          if (arr[i].fieldname == "profileimage") {
-            Obj["profileimage"] = arr[i].filename;
-          }
+      
+      if (email && email.trim() !== "") {
+        // Check if email already exists for another user
+        const emailExists = await Authmodel.findOne({ 
+          email: email.trim(), 
+          _id: { $ne: userId } 
+        });
+        
+        if (emailExists) {
+          console.log("❌ Email already exists for another user");
+          return res.status(400).json({ 
+            success: false, 
+            msg: "Email is already registered with another account" 
+          });
         }
+        updateObj["email"] = email.trim();
+        console.log("📧 Updating email to:", email.trim());
       }
-
-      let data = await Authmodel.findByIdAndUpdate(
+      
+      if (phoneno && phoneno.trim() !== "") {
+        // Check if phone already exists for another user
+        const phoneExists = await Authmodel.findOne({ 
+          phoneno: phoneno.trim(), 
+          _id: { $ne: userId } 
+        });
+        
+        if (phoneExists) {
+          console.log("❌ Phone number already exists for another user");
+          return res.status(400).json({ 
+            success: false, 
+            msg: "Phone number is already registered with another account" 
+          });
+        }
+        updateObj["phoneno"] = phoneno.trim();
+        console.log("📱 Updating phone to:", phoneno.trim());
+      }
+      
+      if (password && password.trim() !== "") {
+        updateObj["password"] = password.trim();
+        console.log("🔑 Updating password");
+      }
+  
+      // Handle file uploads
+      if (req.file) {
+        console.log("🖼️ Processing uploaded file:", req.file.filename);
+        console.log("📄 File details:", {
+          fieldname: req.file.fieldname,
+          originalname: req.file.originalname,
+          filename: req.file.filename,
+          mimetype: req.file.mimetype
+        });
+        
+        updateObj["profileimage"] = req.file.filename;
+        console.log("🖼️ Profile image updated to:", req.file.filename);
+      } else {
+        console.log("📁 No file uploaded");
+      }
+  
+      console.log("📊 Final update object:", updateObj);
+  
+      // Check if there are any fields to update
+      if (Object.keys(updateObj).length === 0) {
+        console.log("ℹ️ No changes to update");
+        return res.status(200).json({ 
+          success: true, 
+          msg: "No changes made", 
+          user: existingUser 
+        });
+      }
+  
+      console.log("💾 Saving updates to database...");
+      
+      // Update user in database
+      const updatedUser = await Authmodel.findByIdAndUpdate(
         userId,
-        { $set: Obj },
-        { new: true }
+        { $set: updateObj },
+        { new: true, runValidators: true }
       );
-      console.log(data);
-      if (data) {
-        return res.status(200).json({ success: data, msg: "Updated user" });
+  
+      if (!updatedUser) {
+        console.log("❌ Failed to update user");
+        return res.status(500).json({ 
+          success: false, 
+          msg: "Failed to update user" 
+        });
       }
+  
+      console.log("✅ User updated successfully:", updatedUser.name);
+      console.log("📊 Updated user data:", {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phoneno,
+        profileImage: updatedUser.profileimage
+      });
+  
+      return res.status(200).json({
+        success: true,
+        msg: "Profile updated successfully",
+        user: updatedUser
+      });
+  
     } catch (error) {
-      console.log(error);
-      return res.status(500).json({ msg: "Somthing went Wrong" });
+      console.error("💥 UPDATE USER ERROR:");
+      console.error("❌ Error name:", error.name);
+      console.error("❌ Error message:", error.message);
+      console.error("❌ Error stack:", error.stack);
+      
+      // Handle specific MongoDB errors
+      if (error.name === 'CastError') {
+        return res.status(400).json({ 
+          success: false, 
+          msg: "Invalid user ID format" 
+        });
+      }
+      
+      if (error.name === 'ValidationError') {
+        return res.status(400).json({ 
+          success: false, 
+          msg: "Validation failed",
+          errors: error.errors 
+        });
+      }
+  
+      if (error.code === 11000) {
+        return res.status(400).json({ 
+          success: false, 
+          msg: "Duplicate field value entered" 
+        });
+      }
+  
+      return res.status(500).json({ 
+        success: false,
+        msg: "Server error during profile update",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   }
 
-  //   User Block & Unblock============================
+ 
   async BlockUnblockUser(req, res) {
     const userId = req.params.userId;
     try {
@@ -427,7 +559,7 @@ async loginWithOtp(req, res) {
     }
   }
 
-  // Forgot password Reset
+
 
   async sendemailOtpRegister(req, res) {
     try {

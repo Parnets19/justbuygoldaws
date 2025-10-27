@@ -3,14 +3,22 @@ const User = require("../Model/User/Auth")
 const admin = require("firebase-admin");
 const serviceAccount = require('../serviceAccountKey.json');
 
-if (!admin.apps.length) {
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`
-}); 
+// Initialize Firebase Admin SDK with error handling
+let db = null;
+try {
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      databaseURL: `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`
+    }); 
+  }
+  // Initialize Firestore
+  db = admin.firestore();
+  console.log("✅ FCM BACKEND: Firebase Admin SDK initialized successfully");
+} catch (firebaseError) {
+  console.log("⚠️ FCM BACKEND: Firebase initialization failed:", firebaseError.message);
+  console.log("⚠️ FCM BACKEND: Continuing without Firebase features");
 }
-// Initialize Firestore
-const db = admin.firestore();
 
 // New endpoint for device registration
 exports.registerDevice = async (req, res) => {
@@ -60,8 +68,12 @@ exports.registerDevice = async (req, res) => {
 
     // Use deviceId as document ID to ensure uniqueness
     try {
-      await db.collection('userDevices').doc(deviceId).set(deviceData);
-      console.log("✅ FCM BACKEND: Device data stored in Firestore");
+      if (db) {
+        await db.collection('userDevices').doc(deviceId).set(deviceData);
+        console.log("✅ FCM BACKEND: Device data stored in Firestore");
+      } else {
+        console.log("⚠️ FCM BACKEND: Firestore not initialized, skipping Firestore storage");
+      }
     } catch (firestoreError) {
       console.log("⚠️ FCM BACKEND: Firestore not available, using MongoDB only:", firestoreError.message);
       // Continue with MongoDB only if Firestore fails
@@ -84,12 +96,27 @@ exports.registerDevice = async (req, res) => {
 
     console.log("🎉 FCM BACKEND: Device registration successful");
     
-    // Send welcome notification
+    // Send welcome notification only for new registrations
     try {
       const userName = user.name || user.email || 'User';
       console.log("👤 FCM BACKEND: User name for notification:", userName);
-      await sendWelcomeNotification(fcmToken, userName);
-      console.log("✅ FCM BACKEND: Welcome notification sent");
+      
+      // Check if this is a new registration or update
+      // For new user accounts, always send welcome notification
+      // For existing users, only send if it's been more than 1 hour since last update
+      const isNewUserRegistration = !fcmTokenRecord.employeeId || fcmTokenRecord.employeeId !== userId;
+      const isLongTimeSinceUpdate = !fcmTokenRecord.lastUpdated || 
+        (new Date() - new Date(fcmTokenRecord.lastUpdated)) > 3600000; // 1 hour threshold
+      
+      if (isNewUserRegistration || isLongTimeSinceUpdate) {
+        console.log("🎉 FCM BACKEND: New user registration or long-time update detected, sending welcome notification");
+        console.log("🔍 FCM BACKEND: isNewUserRegistration:", isNewUserRegistration);
+        console.log("🔍 FCM BACKEND: isLongTimeSinceUpdate:", isLongTimeSinceUpdate);
+        await sendWelcomeNotification(fcmToken, userName);
+        console.log("✅ FCM BACKEND: Welcome notification sent");
+      } else {
+        console.log("🔄 FCM BACKEND: Recent token update detected, skipping welcome notification");
+      }
     } catch (notificationError) {
       console.log("⚠️ FCM BACKEND: Welcome notification failed (non-critical):", notificationError.message);
     }
@@ -140,30 +167,31 @@ exports.updateFCMToken = async (req, res) => {
 
     console.log("✅ FCM BACKEND: User found:", user.name);
 
-        const fcmTokenRecord = await FCMtoken.findOneAndUpdate(
-            {employeeId: userId}, {
-                fcmToken: fcmToken,
-                deviceId,
-                platform: platform || 'android',
-                isActive:true,
-                lastUpdated:new Date(),
-            },
-            {upsert:true, new :true}
-        )
+    const fcmTokenRecord = await FCMtoken.findOneAndUpdate(
+      { employeeId: userId }, 
+      {
+        fcmToken: fcmToken,
+        deviceId,
+        platform: platform || 'android',
+        isActive: true,
+        lastUpdated: new Date(),
+      },
+      { upsert: true, new: true }
+    );
 
-        res.json({
-            success:true,
-            message:"FCM token updated successfully",
-            data:{tokenId:fcmTokenRecord._id}
-        })
-    } catch (error) {
-        console.error("Error updating FCM token:",error)
-        res.status(500).json({
-            success:false,
-            message:"Internal server error"
-        })
-    }
-} 
+    res.json({
+      success: true,
+      message: "FCM token updated successfully",
+      data: { tokenId: fcmTokenRecord._id }
+    });
+  } catch (error) {
+    console.error("Error updating FCM token:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+}; 
 exports.sendNotificationToEmployee = async(req,res) => {
      const { token, title, body } = req.body;
 

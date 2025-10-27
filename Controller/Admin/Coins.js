@@ -34,13 +34,15 @@ class Coins {
   async getBuyId(req, res) {
     try {
       const id = req.params.id;
+      console.log('🪙 COINS: Fetching coins for user:', id);
       const getCoins = await coinsModel.find({ UserId: id }).populate("UserId");
-      if (getCoins?.length > 0) {
-        return res.status(200).json({ success: getCoins });
-      }
-      return res.status(400).json({ error: "error" });
+      console.log('🪙 COINS: Found', getCoins?.length || 0, 'coin requests');
+      
+      // Return 200 with empty array if no coins found (not an error)
+      return res.status(200).json({ success: getCoins || [] });
     } catch (error) {
-      return res.status(400).json({ error: false });
+      console.error('❌ COINS: Error fetching coins:', error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 

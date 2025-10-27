@@ -49,7 +49,18 @@ app.use("/api/user", fcmRoutes);
 app.use("/api/admin/notifications", bulkNotificationRoutes);
 app.use("/api/banners", bannerRoutes);
 
-
+// Health check endpoint for debugging
+app.get("/api/health", (req, res) => {
+  console.log("🏥 Health check requested from:", req.ip);
+  res.json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    server: "JustBuyGold Backend",
+    port: PORT,
+    ip: req.ip,
+    userAgent: req.get('User-Agent')
+  });
+});
 
 // Database connection with enhanced logging
 console.log("🔗 ATTEMPTING DATABASE CONNECTION...");
@@ -62,6 +73,10 @@ mongoose
   .connect(dbUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
+    maxPoolSize: 10, // Connection pool size
+    serverSelectionTimeoutMS: 5000, // Timeout for server selection
+    socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+    connectTimeoutMS: 10000, // Connect timeout
   })
   .then(() => {
     console.log("✅ DATABASE CONNECTION SUCCESSFUL");
@@ -90,9 +105,10 @@ console.log("🚀 STARTING SERVER...");
 console.log("🌐 Port:", PORT);
 console.log("📡 Environment:", process.env.NODE_ENV || "development");
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log("✅ SERVER STARTED SUCCESSFULLY");
   console.log(`🌐 Server running at: http://localhost:${PORT}`);
+  console.log(`🌐 Server accessible at: http://192.168.1.25:${PORT}`);
   console.log("📋 Available endpoints:");
   console.log("   🔐 Auth: /api/v1/user/auth/signin");
   console.log("   📝 Signup: /api/v1/user/auth/signup");
@@ -101,7 +117,7 @@ app.listen(PORT, () => {
   console.log("   📢 Bulk Notifications: /api/admin/notifications/send-notification");
   console.log("   📋 Notification Logs: /api/admin/notifications/logs");
   console.log("   📊 Notification Stats: /api/admin/notifications/stats");
-  console.log("   🖼️ Active Banners: /api/banners/active");
+  console.log("   🖼️ Active Banners: /api/banners/active"); 
   console.log("   🔧 Banner Management: /api/banners");
-  console.log("🔧 Server ready to handle requests");
+  console.log("🔧 Server ready to handle requests from all network interfaces");
 });
