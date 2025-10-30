@@ -185,36 +185,65 @@ class Auth {
   }
 
 async loginWithOtp(req, res) {
+  console.log("📱 OTP LOGIN ATTEMPT STARTED");
+  console.log("📱 Request Body:", { phoneno: req.body.phoneno });
+  
   const { phoneno } = req.body;
   
   try {
     // Validate input
     if (!phoneno) {
+      console.log("❌ VALIDATION FAILED: Missing phone number");
       return res.status(400).json({ error: "Please provide phone number" });
     }
     
-    // Generate OTP immediately (no waiting for DB first)
-    const otp = Math.floor(100000 + Math.random() * 900000);
-    const expirationTime = new Date(Date.now() + 5 * 60 * 1000);
+    console.log("✅ Input validation passed");
+    console.log("🔍 Searching for user with phone:", phoneno);
     
-    // Check user and check block status in parallel with OTP save
-    const [isPhonePresent] = await Promise.all([
-      Authmodel.findOne({ phoneno }).lean(),
-      otpModel.findOneAndUpdate(
-        { phoneno },
-        { $set: { otp, expire_at: expirationTime } },
-        { upsert: true, new: true }
-      )
-    ]);
+    const isPhonePresent = await Authmodel.findOne({ phoneno });
+    console.log("👤 User found:", !!isPhonePresent);
     
     if (!isPhonePresent) {
+      console.log("❌ USER NOT FOUND: Phone number not registered");
       return res.status(400).json({ error: "Phone no is not registered..." });
     }
+
+    console.log("✅ User found in database");
+    console.log("👤 User ID:", isPhonePresent.userId);
+    console.log("👤 User Name:", isPhonePresent.name);
+    console.log("📧 User Email:", isPhonePresent.email);
+    console.log("🔒 User Block Status:", isPhonePresent.isBlock);
     
     // Check if user is blocked
     if (isPhonePresent.isBlock === true) {
+      console.log("🚫 USER BLOCKED: Account is blocked by admin");
       return res.status(403).json({ error: "Account is blocked by Admin !!!" });
     }
+    
+    console.log("✅ User account is not blocked");
+    console.log("🔢 Generating OTP...");
+
+    // Generate OTP (Random for production)
+    const otp = Math.floor(100000 + Math.random() * 900000); // Random 6-digit OTP
+    console.log("🔢 Generated OTP:", otp);
+
+    console.log("💾 Saving OTP to database...");
+    const expirationTime = new Date(Date.now() + 5 * 60 * 1000);
+    console.log("⏰ OTP will expire at:", expirationTime);
+    
+    await otpModel.findOneAndUpdate(
+      { phoneno },
+      { 
+        $set: { 
+          otp,
+          expire_at: expirationTime
+        } 
+      },
+      { upsert: true, new: true }
+    );
+    
+    console.log("✅ OTP saved successfully");
+    console.log("🎉 OTP GENERATION SUCCESSFUL");
 
     return res.status(200).json({
       success: "OTP generated successfully",
@@ -224,7 +253,11 @@ async loginWithOtp(req, res) {
     });
     
   } catch (error) {
-    console.error("OTP Generation Error:", error);
+    console.log("💥 OTP GENERATION ERROR:");
+    console.log("❌ Error message:", error.message);
+    console.log("❌ Error stack:", error.stack);
+    console.log("❌ Full error object:", error);
+    
     return res.status(500).json({ 
       error: "Internal Server Error",
       message: "Failed to generate OTP. Please try again."
@@ -437,19 +470,25 @@ async loginWithOtp(req, res) {
       }
   
       // Handle file uploads
-      if (req.file) {
-        console.log("🖼️ Processing uploaded file:", req.file.filename);
-        console.log("📄 File details:", {
-          fieldname: req.file.fieldname,
-          originalname: req.file.originalname,
-          filename: req.file.filename,
-          mimetype: req.file.mimetype
-        });
+      if (req.files && req.files.length > 0) {
+        console.log("🖼️ Processing uploaded files:", req.files.length);
         
-        updateObj["profileimage"] = req.file.filename;
-        console.log("🖼️ Profile image updated to:", req.file.filename);
+        let arr = req.files;
+        for (let i = 0; i < arr.length; i++) {
+          console.log(`📄 File ${i + 1}:`, {
+            fieldname: arr[i].fieldname,
+            originalname: arr[i].originalname,
+            filename: arr[i].filename,
+            mimetype: arr[i].mimetype
+          });
+          
+          if (arr[i].fieldname === "profileimage") {
+            updateObj["profileimage"] = arr[i].filename;
+            console.log("🖼️ Profile image updated to:", arr[i].filename);
+          }
+        }
       } else {
-        console.log("📁 No file uploaded");
+        console.log("📁 No files uploaded");
       }
   
       console.log("📊 Final update object:", updateObj);
