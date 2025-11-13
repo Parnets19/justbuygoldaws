@@ -19,7 +19,7 @@ router.post("/signin", Authcontroller.userlog);
 router.post("/otp", Authcontroller.loginWithOtp);
 router.post("/otpVarification", Authcontroller.otpVarification);
 router.get("/getalluser", Authcontroller.getlluser);
-router.put("/updateuser", Authcontroller.updateUser);
+router.put("/updateuser", upload.any(), Authcontroller.updateUser);
 router.put("/userblock/:userId", Authcontroller.BlockUnblockUser);
 router.post("/sendmailotp", Authcontroller.sendemailOtpRegister);
 router.post("/verifyOtpEmail", Authcontroller.verfiyEmail);
