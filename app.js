@@ -8,7 +8,13 @@ const morgan = require("morgan");
 const path = require("path");
 
 
-app.use(cors());
+// CORS configuration to allow requests from admin panel
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3034', 'http://192.168.1.36:3000', 'http://192.168.1.36:3034'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(morgan("dev"));
 
 // Enhanced request logging middleware
@@ -95,12 +101,12 @@ mongoose
   });
 
 
-app.use(express.static(path.join(__dirname, 'build'))); // Change 'build' to your frontend folder if needed
+// Serve React app static files (admin panel build)
+app.use(express.static(path.join(__dirname, 'build')));
 
-// Redirect all requests to the index.html file
-
+// All routes including /paymentsuccess and /paymentcancel will be handled by React Router
 app.get("*", (req, res) => {
-  return  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 const PORT = 3034;

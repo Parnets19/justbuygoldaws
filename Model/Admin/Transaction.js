@@ -14,6 +14,14 @@ const transaction = new mongoose.Schema(
     gold: {
       type: String,
     },
+    metalType: {
+      type: String,
+      default: "24k"
+    },
+    purity: {
+      type: String, 
+      default: "999"
+    },
     PaymentId: {
       type: String,
     },

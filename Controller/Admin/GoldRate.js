@@ -4,8 +4,23 @@ const GoldModel = require("../../Model/Admin/GoldRate");
 class GoldRate {
   async addrate(req, res) {
     try {
-      let { name, rate, percentage } = req.body;
-      const Newrate = await new GoldModel({ name, rate, percentage });
+      let { name, metalType, purity, rate, percentage } = req.body;
+      
+      // Set defaults if not provided
+      if (!metalType && name) {
+        if (name === "Silver") {
+          metalType = "Silver";
+          purity = purity || "995";
+        } else if (name === "22" || name === "22k") {
+          metalType = "22k-916";
+          purity = purity || "916";
+        } else {
+          metalType = "24k";
+          purity = purity || "999";
+        }
+      }
+      
+      const Newrate = await new GoldModel({ name, metalType, purity, rate, percentage });
       Newrate.save().then((data) => {
         console.log(data);
         return res.status(200).json({ msg: "New rate add", success: "true" });
@@ -18,10 +33,16 @@ class GoldRate {
 
   async updaterate(req, res) {
     try {
-      let { id, name, rate, percentage } = req.body;
+      let { id, name, metalType, purity, rate, percentage } = req.body;
       let Obj = {};
       if (name) {
         Obj["name"] = name;
+      }
+      if (metalType) {
+        Obj["metalType"] = metalType;
+      }
+      if (purity) {
+        Obj["purity"] = purity;
       }
       if (rate) {
         Obj["rate"] = rate;
@@ -37,7 +58,6 @@ class GoldRate {
       );
       console.log(goldrate);
       return res.status(200).json({ success: goldrate, msg: "Rate update !" });
-      return;
     } catch (error) {
       console.log(error);
       return res.status(400).json({ success: false, msg: "Rate not update !" });

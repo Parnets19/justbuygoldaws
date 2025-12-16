@@ -6,7 +6,7 @@ const axios = require("axios");
 class transaction {
   async transactions(req, res) {
     try {
-      let { UserId, amount, gold, PaymentId, status, totalCoin, goldRate, gst, goldValue } = req.body;
+      let { UserId, amount, gold, PaymentId, status, totalCoin, goldRate, gst, goldValue, metalType, purity } = req.body;
       
       console.log("🔄 TRANSACTION: Creating new transaction");
       console.log("📦 TRANSACTION: Request body:", req.body);
@@ -14,6 +14,8 @@ class transaction {
       console.log("💰 TRANSACTION: Amount:", amount);
       console.log("🥇 TRANSACTION: Gold:", gold);
       console.log("💳 TRANSACTION: PaymentId:", PaymentId);
+      console.log("🔖 TRANSACTION: MetalType:", metalType);
+      console.log("🔖 TRANSACTION: Purity:", purity);
       
       // Validate required fields
       if (!UserId) {
@@ -26,10 +28,18 @@ class transaction {
         return res.status(400).json({ error: "Amount and gold are required" });
       }
       
+      // Set defaults for metalType and purity if not provided
+      if (!metalType) {
+        metalType = "24k";
+        purity = purity || "999";
+      }
+      
       const newPayment = new transactionModel({
         UserId,
         amount,
         gold,
+        metalType,
+        purity,
         PaymentId,
         totalCoin,
         status: status || "Paid", // Default status
