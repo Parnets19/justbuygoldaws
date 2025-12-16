@@ -71,8 +71,8 @@ console.log("🔗 ATTEMPTING DATABASE CONNECTION...");
 console.log("📊 Database URI:", "mongodb+srv://parnetstech13_db_user:***@cluster0.pi17mzu.mongodb.net/");
 
 // const dbUri = "mongodb://localhost:27017/justbuygoldb_justbuygoldb";
+// const dbUri = "mongodb+srv://parnetstech13_db_user:ApLEMJoHhxuIjuYv@cluster0.pi17mzu.mongodb.net/";
 const dbUri = "mongodb+srv://parnetstech13_db_user:ApLEMJoHhxuIjuYv@cluster0.pi17mzu.mongodb.net/";
-
 mongoose
   .connect(dbUri, {
     useNewUrlParser: true,
