@@ -34,6 +34,44 @@ class transaction {
         purity = purity || "999";
       }
       
+      // Check if transaction with same PaymentId already exists (prevent duplicates)
+      if (PaymentId && PaymentId.trim() !== '') {
+        const existingTransaction = await transactionModel.findOne({ PaymentId: PaymentId });
+        if (existingTransaction) {
+          console.log("⚠️ TRANSACTION: Transaction with PaymentId already exists:", PaymentId);
+          console.log("✅ TRANSACTION: Returning existing transaction");
+          return res.status(200).json({ 
+            success: existingTransaction, 
+            msg: "Transaction already exists",
+            transactionId: existingTransaction._id,
+            isDuplicate: true
+          });
+        }
+      }
+      
+      // Also check for duplicate transactions by UserId + amount + gold within last 5 minutes
+      // This prevents duplicates even if PaymentId is empty or different
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const duplicateCheck = await transactionModel.findOne({
+        UserId: UserId,
+        amount: amount,
+        gold: gold,
+        metalType: metalType,
+        purity: purity,
+        createdAt: { $gte: fiveMinutesAgo }
+      });
+      
+      if (duplicateCheck) {
+        console.log("⚠️ TRANSACTION: Duplicate transaction detected (same user, amount, gold, metalType within 5 minutes)");
+        console.log("✅ TRANSACTION: Returning existing transaction");
+        return res.status(200).json({ 
+          success: duplicateCheck, 
+          msg: "Transaction already exists",
+          transactionId: duplicateCheck._id,
+          isDuplicate: true
+        });
+      }
+      
       const newPayment = new transactionModel({
         UserId,
         amount,

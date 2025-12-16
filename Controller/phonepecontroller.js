@@ -353,199 +353,10 @@ const transporter = nodemailer.createTransport({
 
 
 
-const sendReceipt = async (username, email, amount, transactionId) => {
-  try {
-    const doc = new PDFDocument({ margin: 40, size: "A4" });
-    const buffers = [];
-
-    doc.on("data", buffers.push.bind(buffers));
-
-    // COLORS
-    const primaryColor = "#1E3A8A";
-    const textColor = "#111827";
-    const lightGray = "#6B7280";
-    const highlightColor = "#16a34a";
-
-    // AMOUNT CALCULATION
-    const grandTotal = parseFloat(amount);
-    const subTotal = parseFloat((grandTotal / 1.204).toFixed(2));
-    const igst = parseFloat((subTotal * 0.18).toFixed(2));
-    const txnCharge = parseFloat((subTotal * 0.024).toFixed(2));
-
-    // HEADER
-    try {
-      doc.image("logo.png", 40, 30, { width: 60 });
-    } catch {
-      console.warn("Logo not found");
-    }
-
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(18)
-      .fillColor(primaryColor)
-      .text("PAID INVOICE", 400, 40, { align: "right" });
-
-    doc
-      .fontSize(10)
-      .fillColor(textColor)
-      .text(`Invoice#: ${transactionId}`, 400, 60, { align: "right" })
-      .text(`Date: ${new Date().toLocaleDateString("en-GB")}`, 400, 75, {
-        align: "right",
-      });
-
-    // INVOICE TO BOX
-    doc.rect(40, 110, 515, 90).fill("#F3F4F6");
-
-    // Left Section: User Info
-    doc
-      .fillColor(textColor)
-      .font("Helvetica-Bold")
-      .fontSize(11)
-      .text("Invoice To:", 50, 120);
-
-    doc
-      .font("Helvetica")
-      .fontSize(10)
-      .text(username, 50, 135)
-      .text(email, 50, 150);
-
-    // Right Section: Static Address
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(10)
-      .text("ARIVUBODHI", 320, 120)
-      .text("SHIKSHAK TALENTS LLP.", 320, 133)
-      .font("Helvetica")
-      .text("138,1st Floor, 20th Main Road,", 320, 146)
-      .text("53rd Cross, 8th Block, Rajajinagar,", 320, 159)
-      .text("Bengaluru, 560010", 320, 172)
-      .text("parikshashikshak@gmail.com", 320, 185);
-
-    doc
-      .font("Helvetica-Bold")
-      .text("GSTIN : 29ACGFA8346M1ZS", 320, 205);
-
-    // TABLE HEADERS
-    const tableTop = 230;
-    const columnWidths = [100, 200, 60, 60, 80];
-    const headers = ["Item Type",  "Price", "Quantity", "Amount"];
-    let x = 40;
-    doc.font("Helvetica-Bold").fontSize(10).fillColor(textColor);
-    headers.forEach((text, i) => {
-      doc.text(text, x, tableTop, { width: columnWidths[i] });
-      x += columnWidths[i];
-    });
-    doc.moveTo(40, tableTop + 15).lineTo(555, tableTop + 15).stroke();
-
-    // TABLE ROW
-    const rowY = tableTop + 25;
-    const row = ["DTP Service Charge",  `₹${subTotal}`, "1", `₹${subTotal}`];
-    x = 40;
-    doc.font("Helvetica").fontSize(10).fillColor("#374151");
-    row.forEach((text, i) => {
-      doc.text(text, x, rowY, { width: columnWidths[i] });
-      x += columnWidths[i];
-    });
-
-    // AMOUNT SECTION
-    const amountY = rowY + 50;
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(10)
-      .fillColor(textColor)
-      .text("Sub Total", 400, amountY)
-      .text(`₹${subTotal}`, 500, amountY, { align: "right" });
-
-    doc
-      .text("IGST (18%)", 400, amountY + 15)
-      .text(`₹${igst}`, 500, amountY + 15, { align: "right" });
-
-    doc
-      .text("Transaction Charge (2.4%)", 400, amountY + 30)
-      .text(`₹${txnCharge}`, 500, amountY + 30, { align: "right" });
-
-    doc
-      .font("Helvetica-Bold")
-      .text("Grand Total", 400, amountY + 50)
-      .text(`₹${grandTotal}`, 500, amountY + 50, { align: "right" });
-
-    // TRANSACTION SUMMARY
-    const boxY = amountY + 100;
-    doc.moveTo(40, boxY).lineTo(555, boxY).stroke();
-
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(10)
-      .fillColor(textColor)
-      .text("Transaction Date", 45, boxY + 10)
-      .text("Transaction ID", 160, boxY + 10)
-      .text("Gateway", 300, boxY + 10)
-      .text("Total Paid", 420, boxY + 10);
-
-    doc
-      .font("Helvetica")
-      .fillColor("#374151")
-      .text(new Date().toLocaleDateString("en-GB"), 45, boxY + 30)
-      .text(transactionId, 160, boxY + 30)
-      .text("PhonePe / Razorpay", 300, boxY + 30)
-      .text(`₹${grandTotal}`, 420, boxY + 30);
-
-    doc.moveTo(40, boxY + 50).lineTo(555, boxY + 50).stroke();
-
-    // FOOTER
-    doc
-      .moveTo(40, 750)
-      .lineTo(555, 750)
-      .strokeColor("#e5e7eb")
-      .stroke();
-
-    doc
-      .font("Helvetica-Oblique")
-      .fontSize(10)
-      .fillColor("#6B7280")
-      .text("Thank you for your payment!", 50, 760)
-      .text("For support, contact support@parikshashikshak.com", 50, 775);
-
-    doc.end();
-
-    doc.on("end", async () => {
-      const pdfBuffer = Buffer.concat(buffers);
-
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
-
-      await transporter.sendMail({
-        from: `"Pariksha Shikshak" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: "Your ParikshaShikshak Payment Receipt",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
-            <h2 style="color: #1E3A8A; text-align: center;">ParikshaShikshak</h2>
-            <p>Hello <strong>${username}</strong>,</p>
-            <p>Thank you for your payment of ₹${grandTotal}.</p>
-            <p><strong>Transaction ID:</strong> ${transactionId}</p>
-            <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
-            <p>Your receipt is attached as a PDF. For any issues, reach out to our support.</p>
-            <p style="text-align: center; color: #6B7280;">support@parikshashikshak.com</p>
-          </div>
-        `,
-        attachments: [
-          {
-            filename: `Receipt-${transactionId}.pdf`,
-            content: pdfBuffer,
-          },
-        ],
-      });
-    });
-  } catch (err) {
-    console.error("Receipt error:", err);
-  }
-};
+// Email PDF receipt functionality removed as per user request
+// const sendReceipt = async (username, email, amount, transactionId) => {
+//   ... (entire function commented out)
+// };
 
 const transactionModel = require("../Model/PhonepeModal");
 const PaymentSettingsModel = require("../Model/Admin/PaymentSettings");
@@ -752,10 +563,15 @@ class Transaction {
       client.getOrderStatus(id).then(async (response) => {
         const state = response.state;
         if (state == "COMPLETED") {
-          sendReceipt(data.username,data.email,data.amount,data._id)
+          // Email PDF receipt functionality removed as per user request
+          
           if (data.config) {
-            await axios(JSON.parse(data.config))
-            data.config = null
+            try {
+              await axios(JSON.parse(data.config));
+              data.config = null;
+            } catch (configError) {
+              console.error("❌ CONFIG: Error executing config:", configError.message);
+            }
           }
         }
         data.status = state;
@@ -785,22 +601,24 @@ class Transaction {
     console.log(`📞 Callback received: Transaction ${merchantTransactionId}, Status: ${state}`);
     let data = await transactionModel.findById(merchantTransactionId);
     
-    if (data) {
-      data.status = state;
-      
-      if (state === 'COMPLETED') {
-        // Payment successful
-        console.log(`✅ Transaction ${merchantTransactionId} was successful.`);
-        sendReceipt(data.username, data.email, data.amount, data._id);
-        if (data.config) {
-          try {
-            await axios(JSON.parse(data.config));
-            data.config = null;
-          } catch (error) {
-            console.error("Error executing config:", error);
+      if (data) {
+        data.status = state;
+        
+        if (state === 'COMPLETED') {
+          // Payment successful
+          console.log(`✅ Transaction ${merchantTransactionId} was successful.`);
+          
+          // Email PDF receipt functionality removed as per user request
+          
+          if (data.config) {
+            try {
+              await axios(JSON.parse(data.config));
+              data.config = null;
+            } catch (error) {
+              console.error("❌ CONFIG: Error executing config:", error.message);
+            }
           }
-        }
-      } else if (state === 'FAILED' || state === 'CANCELLED' || state === 'PENDING') {
+        } else if (state === 'FAILED' || state === 'CANCELLED' || state === 'PENDING') {
         // Payment failed, cancelled, or pending
         console.log(`❌ Transaction ${merchantTransactionId} status: ${state}`);
         
