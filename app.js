@@ -31,9 +31,11 @@ const CoinRouter = require("./Route/Admin/Coins");
 const Referral = require("./Route/Admin/Refferal");
 const Referralprice = require("./Route/Admin/RefferalPrice");
 const walletHistoryRoutes = require("./Route/Admin/WalletHistory"); 
+const paymentSettingsRoutes = require("./Route/Admin/PaymentSettings");
 const fcmRoutes = require("./Route/FcmRoutes");
 const bulkNotificationRoutes = require("./Route/BulkNotificationRoutes");
 const bannerRoutes = require("./Route/BannerRoutes");
+const phonepeRoutes = require("./Route/phonepeRoutes");
 
 app.use("/api/v1/user/auth", UserRouter);
 app.use("/api/v1/rate", GoldeRateRouter);
@@ -45,9 +47,11 @@ app.use("/api/v1/coins", CoinRouter);
 app.use("/api/v1", Referral);
 app.use("/api/v1", Referralprice);
 app.use("/api/v1", walletHistoryRoutes); 
+app.use("/api/v1/admin/payment", paymentSettingsRoutes);
 app.use("/api/user", fcmRoutes);
 app.use("/api/admin/notifications", bulkNotificationRoutes);
 app.use("/api/banners", bannerRoutes);
+app.use("/api/phonepe", phonepeRoutes);
 
 // Health check endpoint for debugging
 app.get("/api/health", (req, res) => {
@@ -108,7 +112,7 @@ console.log("📡 Environment:", process.env.NODE_ENV || "development");
 app.listen(PORT, '0.0.0.0', () => {
   console.log("✅ SERVER STARTED SUCCESSFULLY");
   console.log(`🌐 Server running at: http://localhost:${PORT}`);
-  console.log(`🌐 Server accessible at: http://192.168.1.25:${PORT}`);
+  console.log(`🌐 Server accessible at: http://192.168.1.36:${PORT}`);
   console.log("📋 Available endpoints:");
   console.log("   🔐 Auth: /api/v1/user/auth/signin");
   console.log("   📝 Signup: /api/v1/user/auth/signup");
@@ -119,5 +123,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log("   📊 Notification Stats: /api/admin/notifications/stats");
   console.log("   🖼️ Active Banners: /api/banners/active"); 
   console.log("   🔧 Banner Management: /api/banners");
+  console.log("   💳 PhonePe Payment: /api/phonepe/makepayment");
+  console.log("   📞 PhonePe Callback: /api/phonepe/payment-callback");
+  console.log("   🔍 Check Payment: /api/phonepe/checkPayment/:id/:userId");
   console.log("🔧 Server ready to handle requests from all network interfaces");
 });
