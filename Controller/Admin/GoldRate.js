@@ -80,9 +80,16 @@ class GoldRate {
 
   async getrate(req, res) {
     try {
-      const getallrate = await GoldModel.find({}).sort({ rate: -1 });
+      const getallrate = await GoldModel.find({});
+      
+      // Sort by rate as numbers, not strings
+      const sortedRates = getallrate.sort((a, b) => {
+        const rateA = Number(a.rate) || 0;
+        const rateB = Number(b.rate) || 0;
+        return rateB - rateA; // Descending order (highest first)
+      });
 
-      return res.status(200).json({ success: getallrate, msg: "Get All Rate" });
+      return res.status(200).json({ success: sortedRates, msg: "Get All Rate" });
     } catch (error) {
       console.log(error);
       return res.status(400).json({ success: false, msg: "Something wrong" });

@@ -38,14 +38,20 @@ const getBanners = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(10); // Limit to 10 banners for performance
 
-    // Convert to full URLs for mobile app
+    // Convert to full URLs for mobile app - use local URL for development
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://justbuygold.online' 
+      : 'http://192.168.1.36:3034'; // Use local IP for mobile app access
+    
     const bannersWithUrls = banners.map(banner => ({
       _id: banner._id,
-      imageUrl: `https://justbuygold.online/Banners/${path.basename(banner.imagePath)}`,
+      imageUrl: `${baseUrl}/Banners/${path.basename(banner.imagePath)}`,
       createdAt: banner.createdAt
     }));
 
     console.log("✅ BANNER: Found", banners.length, "banners");
+    console.log("📱 BANNER: Using base URL:", baseUrl);
+    console.log("📱 BANNER: Banner URLs:", bannersWithUrls.map(b => b.imageUrl));
     
     res.status(200).json({
       success: true,
@@ -71,9 +77,13 @@ const getAllBanners = async (req, res) => {
       .sort({ createdAt: -1 });
 
     // Convert to full URLs for admin panel
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://justbuygold.online' 
+      : 'http://localhost:3034';
+    
     const bannersWithUrls = banners.map(banner => ({
       _id: banner._id,
-      imageUrl: `https://justbuygold.online/Banners/${path.basename(banner.imagePath)}`,
+      imageUrl: `${baseUrl}/Banners/${path.basename(banner.imagePath)}`,
       createdAt: banner.createdAt
     }));
 
@@ -124,12 +134,16 @@ const uploadBanner = async (req, res) => {
 
     console.log("✅ ADMIN: Banner uploaded successfully:", banner._id);
 
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://justbuygold.online' 
+      : 'http://localhost:3034';
+
     res.status(201).json({
       success: true,
       message: "Banner uploaded successfully",
       data: {
         _id: banner._id,
-        imageUrl: `https://justbuygold.online/Banners/${path.basename(banner.imagePath)}`,
+        imageUrl: `${baseUrl}/Banners/${path.basename(banner.imagePath)}`,
         createdAt: banner.createdAt
       }
     });
@@ -199,10 +213,95 @@ const deleteBanner = async (req, res) => {
   }
 };
 
+// Update existing banner
+const updateBanner = async (req, res) => {
+  try {
+    console.log("🔧 ADMIN: Updating banner");
+    console.log("📦 ADMIN: Banner ID:", req.params.id);
+    
+    const { id } = req.params;
+
+    // Validate ID
+    if (!id || id === 'undefined' || id === 'null') {
+      console.log("❌ ADMIN: Invalid banner ID provided");
+      return res.status(400).json({
+        success: false,
+        message: "Invalid banner ID"
+      });
+    }
+
+    if (!req.file) {
+      console.log("❌ ADMIN: No image file provided for update");
+      return res.status(400).json({
+        success: false,
+        message: "Image file is required for update"
+      });
+    }
+
+    // Find existing banner
+    const existingBanner = await Banner.findById(id);
+    if (!existingBanner) {
+      console.log("❌ ADMIN: Banner not found for update");
+      return res.status(404).json({
+        success: false,
+        message: "Banner not found"
+      });
+    }
+
+    console.log("📁 ADMIN: New file details:", {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      encoding: req.file.encoding,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      path: req.file.path
+    });
+
+    // Delete old image file
+    try {
+      if (fs.existsSync(existingBanner.imagePath)) {
+        fs.unlinkSync(existingBanner.imagePath);
+        console.log("✅ ADMIN: Old image file deleted from filesystem");
+      }
+    } catch (fileError) {
+      console.log("⚠️ ADMIN: Could not delete old image file:", fileError.message);
+    }
+
+    // Update banner with new image path
+    existingBanner.imagePath = req.file.path;
+    await existingBanner.save();
+
+    console.log("✅ ADMIN: Banner updated successfully:", existingBanner._id);
+
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://justbuygold.online' 
+      : 'http://localhost:3034';
+
+    res.status(200).json({
+      success: true,
+      message: "Banner updated successfully",
+      data: {
+        _id: existingBanner._id,
+        imageUrl: `${baseUrl}/Banners/${path.basename(existingBanner.imagePath)}`,
+        createdAt: existingBanner.createdAt,
+        updatedAt: existingBanner.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error("❌ ADMIN: Error updating banner:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update banner",
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   upload,
   getBanners,
   getAllBanners,
   uploadBanner,
+  updateBanner,
   deleteBanner
 };
